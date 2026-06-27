@@ -601,6 +601,16 @@ function SummaryResultModal(props: SummaryResultModalProps) {
         showToast("Copied to clipboard!", Toasts.Type.SUCCESS);
     };
 
+    const renderBold = (text: string) => {
+        const parts = text.split(/(\*\*.*?\*\*)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+                return <strong key={index} style={{ color: "var(--text-brand)" }}>{part.slice(2, -2)}</strong>;
+            }
+            return <span key={index}>{part}</span>;
+        });
+    };
+
     // Parse summary text into React elements
     const renderSummary = (text: string) => {
         const lines = text.split("\n");
@@ -660,7 +670,7 @@ function SummaryResultModal(props: SummaryResultModalProps) {
                         color: "var(--text-normal)"
                     }}>
                         <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>•</span>
-                        <span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-brand)">$1</strong>') }} />
+                        <div>{renderBold(content)}</div>
                     </div>
                 );
                 continue;
@@ -673,9 +683,9 @@ function SummaryResultModal(props: SummaryResultModalProps) {
                     lineHeight: "1.5",
                     color: "var(--text-normal)",
                     marginBottom: "6px"
-                }}
-                    dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-brand)">$1</strong>') }}
-                />
+                }}>
+                    {renderBold(line)}
+                </div>
             );
         }
         return elements;
