@@ -21,7 +21,7 @@ export function GlobalPromptInput() {
 
                 <div style={{ marginTop: "8px" }}>
                     <TextArea
-                        placeholder="e.g. Please summarize the recent messages..."
+                        placeholder="e.g. All outputs must be written in natural English"
                         value={customPrompt}
                         onChange={(val: string) => {
                             settings.store.customPrompt = val;
