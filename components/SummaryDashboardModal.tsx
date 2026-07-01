@@ -354,7 +354,7 @@ Write a core one-line summary to grasp the overall flow.
                 setCollectedMessages([]);
 
                 // For webhook: format headers with ANSI blocks
-                const webhookResult = result.replace(/^■\s*\[(.*?)\]/gm, "```ansi\n\x1b[2;34m■ [$1]\x1b[0m\n```");
+                const webhookResult = result.replace(/^■\s*\[?([^\]\r\n]+)\]?/gm, "```ansi\n\x1b[2;34m■ [$1]\x1b[0m\n```");
 
                 // 4. Automatically open result modal when done
                 openModal(modalProps => (
@@ -626,7 +626,7 @@ function SummaryResultModal(props: SummaryResultModalProps) {
             if (!line) continue;
 
             // Section header: ■ [Topic]
-            const sectionMatch = line.match(/^■\s*\[(.+?)\]/);
+            const sectionMatch = line.match(/^■\s*\[?([^\]]+)\]?/);
             if (sectionMatch) {
                 elements.push(
                     <div key={i} style={{
@@ -646,7 +646,7 @@ function SummaryResultModal(props: SummaryResultModalProps) {
             }
 
             // One-line summary header
-            if (line.startsWith("[한 줄 요약]") || line.startsWith("[One-line")) {
+            if (/^\[?(한 줄 요약|one-line summary|summary|요약)\]?:?/i.test(line)) {
                 elements.push(
                     <div key={i} style={{
                         fontSize: "13px",
