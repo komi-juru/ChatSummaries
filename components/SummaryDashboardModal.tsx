@@ -354,7 +354,10 @@ Write a core one-line summary to grasp the overall flow.
                 setCollectedMessages([]);
 
                 // For webhook: format headers with ANSI blocks
-                const webhookResult = result.replace(/^■\s*\[?([^\]\r\n]+)\]?/gm, "```ansi\n\x1b[2;34m■ [$1]\x1b[0m\n```");
+                const webhookResult = result.replace(/^■\s*(.*)$/gm, (match, topic) => {
+                    const cleanTopic = topic.replace(/^[\s\[\]*]+|[\s\[\]*]+$/g, "");
+                    return "```ansi\n\x1b[2;34m■ [" + cleanTopic + "]\x1b[0m\n```";
+                });
 
                 // 4. Automatically open result modal when done
                 openModal(modalProps => (
@@ -626,8 +629,9 @@ function SummaryResultModal(props: SummaryResultModalProps) {
             if (!line) continue;
 
             // Section header: ■ [Topic]
-            const sectionMatch = line.match(/^■\s*\[?([^\]]+)\]?/);
+            const sectionMatch = line.match(/^■\s*(.*)$/);
             if (sectionMatch) {
+                const cleanTopic = sectionMatch[1].replace(/^[\s\[\]*]+|[\s\[\]*]+$/g, "");
                 elements.push(
                     <div key={i} style={{
                         marginTop: elements.length > 0 ? "16px" : "0",
@@ -639,7 +643,7 @@ function SummaryResultModal(props: SummaryResultModalProps) {
                         fontSize: "13px",
                         fontWeight: 700
                     }}>
-                        ■ {sectionMatch[1]}
+                        ■ {cleanTopic}
                     </div>
                 );
                 continue;
