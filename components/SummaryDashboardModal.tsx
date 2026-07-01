@@ -289,32 +289,42 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
                     text = "";
                 }
 
-                if (m.attachments && m.attachments.length > 0) text += " [첨부파일]";
-                if (m.embeds && m.embeds.length > 0 && !text.includes("http")) text += " [링크/임베드]";
-                if (m.sticker_items || m.stickerItems) text += " [스티커]";
+                if (m.attachments && m.attachments.length > 0) text += " [Attachment]";
+                if (m.embeds && m.embeds.length > 0 && !text.includes("http")) text += " [Link/Embed]";
+                if (m.sticker_items || m.stickerItems) text += " [Sticker]";
                 text = text.trim();
                 if (!text) return null;
                 return `${formatAuthorName(m.author)}: ${text}`;
             }).filter(Boolean).join("\n");
 
+            let discordLanguage = "en-US";
+            try {
+                const { findByProps } = require("@webpack");
+                const localeStore = findByProps("getLocale");
+                if (localeStore && localeStore.getLocale) {
+                    discordLanguage = localeStore.getLocale();
+                }
+            } catch (e) {}
+
             let prompt = "";
-            const defaultStructure = `[출력 포맷 및 규칙]
-절대 인사말이나 불필요한 제목을 넣지 마세요. 반드시 아래의 구조를 그대로 지켜서 출력하세요.
+            const defaultStructure = `[Output Format and Rules]
+CRITICAL: You MUST write your entire response in the following language locale: ${discordLanguage}.
+Never include greetings or unnecessary titles. You must strictly follow the structure below.
 
-[한 줄 요약]
-전체 흐름을 파악할 수 있는 핵심 한 줄 요약 작성.
+[One-line Summary]
+Write a core one-line summary to grasp the overall flow.
 
-■ [주제 키워드 직접 생성]
-- 세부 요약 내용 1 (**중요 키워드/수치**는 볼드 처리)
-- 세부 요약 내용 2
+■ [Topic Keyword (Generate yourself)]
+- Detailed summary 1 (Bold important keywords/numbers)
+- Detailed summary 2
 
-■ [다음 주제 키워드]
-- 세부 요약 내용 1...
+■ [Next Topic Keyword]
+- Detailed summary 1...
 
-[요약 지침]
-1. 이미지/링크만 있는 대화는 유저 반응 보고 유추할 것.
-2. 길게 늘어지지 않게 팩트만 간결하게 압축할 것.
-3. 자잘한 잡담은 버리고 핵심 떡밥 3~4개 위주로 요약할 것.
+[Summary Guidelines]
+1. For conversations with only images/links, infer from user reactions.
+2. Compress facts concisely without dragging on.
+3. Discard trivial chat and summarize mainly around 3~4 core topics.
 
 `;
 
@@ -322,17 +332,17 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
             const hasCustom = props.customPrompt.trim().length > 0;
 
             if (hasOneTime && !keepFormat) {
-                prompt = `[지시사항]\n${oneTimePrompt.trim()}\n\n`;
+                prompt = `[Instruction]\nOutput Language Locale: ${discordLanguage}\n\n${oneTimePrompt.trim()}\n\n`;
             } else {
                 prompt = defaultStructure;
                 if (hasOneTime) {
-                    prompt = `[긴급 추가 지시사항: ${oneTimePrompt.trim()}]\n\n` + prompt;
+                    prompt = `[Urgent Additional Instruction: ${oneTimePrompt.trim()}]\n\n` + prompt;
                 } else if (hasCustom) {
                     prompt = `[Custom Instruction: ${props.customPrompt.trim()}]\n\n` + prompt;
                 }
             }
 
-            prompt += `대화 내용:\n${chatText}`;
+            prompt += `Chat Log:\n${chatText}`;
 
             SummaryState.isSummarizing = true;
 
