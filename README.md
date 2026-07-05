@@ -31,9 +31,10 @@ git clone https://github.com/Vendicated/Vencord
 ```
 
 ### 3. Install ChatSummaries
-Create the userplugins folder if it doesn't exist.
 ```bash
-cd Vencord/src/userplugins
+cd Vencord/src
+mkdir userplugins
+cd userplugins
 git clone https://github.com/komi-juru/AlwaysTranslate.git alwaysTranslate
 pnpm build
 ```
