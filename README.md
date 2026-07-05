@@ -12,7 +12,7 @@ AI chat summarization for vencord
 
 ---
 
-## Installation
+## Install
 
 Building Vencord from source is required.
 
@@ -31,25 +31,19 @@ git clone https://github.com/Vendicated/Vencord
 ```
 
 ### 3. Install ChatSummaries
-
+Create the userplugins folder if it doesn't exist.
 ```bash
 cd Vencord/src/userplugins
-git clone https://github.com/komi-juru/ChatSummaries.git ChatSummaries
-
-cd ../..
-pnpm install
+git clone https://github.com/komi-juru/AlwaysTranslate.git alwaysTranslate
 pnpm build
 ```
 
 ---
 
-## Updating
+## Update
 
 ```bash
 cd Vencord/src/userplugins/ChatSummaries
-git pull
-
-cd ../..
 pnpm build
 ```
 
