@@ -53,7 +53,7 @@ pnpm build
 
 Configure your API key in the plugin settings.
 
-- **Gemini** – https://aistudio.google.com/
+- **Gemini** – https://aistudio.google.com/api-keys
 
 ---
 
