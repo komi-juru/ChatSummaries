@@ -395,6 +395,8 @@ Write a core one-line summary to grasp the overall flow.
 
             } catch (error: any) {
                 console.error("Summarize Error:", error);
+                const errorMsg = error?.message || "Request failed";
+                showToast(`Gemini: ${errorMsg.length > 80 ? errorMsg.substring(0, 80) + "..." : errorMsg}`, Toasts.Type.FAILURE);
             } finally {
                 SummaryState.isSummarizing = false;
             }
