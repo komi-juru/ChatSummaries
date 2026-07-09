@@ -335,10 +335,11 @@ Write a core one-line summary to grasp the overall flow.
                 prompt = `[Instruction]\nOutput Language Locale: ${discordLanguage}\n\n${oneTimePrompt.trim()}\n\n`;
             } else {
                 prompt = defaultStructure;
+                const toneOverride = `[CRITICAL RULE]\nYou must STRICTLY maintain the output structural format (One-line Summary, ■ Topic Keyword, bullet points) exactly as shown below.\nHOWEVER, you must COMPLETELY adapt the TONE, STYLE, and PERSONALITY of the entire summary content to match the Custom Instruction below, ignoring any conflicting tone guidelines (like 'concise' or 'factual').\n\n`;
                 if (hasOneTime) {
-                    prompt = `[Urgent Additional Instruction: ${oneTimePrompt.trim()}]\n\n` + prompt;
+                    prompt = toneOverride + `[Urgent Additional Instruction: ${oneTimePrompt.trim()}]\n\n` + prompt;
                 } else if (hasCustom) {
-                    prompt = `[Custom Instruction: ${props.customPrompt.trim()}]\n\n` + prompt;
+                    prompt = toneOverride + `[Custom Instruction: ${props.customPrompt.trim()}]\n\n` + prompt;
                 }
             }
 
