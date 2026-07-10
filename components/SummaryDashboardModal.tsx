@@ -482,9 +482,9 @@ Write a core one-line summary to grasp the overall flow.
 
                 {showAdvanced && (
                     <div style={{ paddingLeft: "4px", marginTop: "8px" }}>
-                        <Forms.FormTitle tag="h5">Prompt Override</Forms.FormTitle>
+                        <Forms.FormTitle tag="h5">Additional Prompt</Forms.FormTitle>
                         <Forms.FormText type="description" style={{ marginBottom: "8px" }}>
-                            Enter instructions to be applied only for this specific summary.
+                            Enter one-time instructions. This will be combined with your Custom Prompt.
                         </Forms.FormText>
                         <TextArea
                             placeholder="e.g. Translate everything into English"
