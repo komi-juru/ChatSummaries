@@ -23,6 +23,7 @@ interface SummaryDashboardModalProps {
 
 const persistedState = {
     limit: 500,
+    timeRange: 24,
     autoSaveTxt: false,
     oneTimePrompt: "",
     keepFormat: true,
@@ -32,9 +33,20 @@ const persistedState = {
     recoveryMessagesMap: new Map<string, any[]>()
 };
 
+const getMsgTime = (msg: any) => {
+    if (!msg || !msg.timestamp) return 0;
+    if (typeof msg.timestamp === "number") return msg.timestamp;
+    if (typeof msg.timestamp.toDate === "function") return msg.timestamp.toDate().getTime();
+    if (typeof msg.timestamp.valueOf === "function") return msg.timestamp.valueOf();
+    return new Date(msg.timestamp).getTime() || 0;
+};
+
 export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
     const [limit, _setLimit] = React.useState(persistedState.limit);
     const setLimit = (val: number) => { persistedState.limit = val; _setLimit(val); };
+
+    const [timeRange, _setTimeRange] = React.useState(persistedState.timeRange);
+    const setTimeRange = (val: number) => { persistedState.timeRange = val; _setTimeRange(val); };
 
     const [autoSaveTxt, _setAutoSaveTxt] = React.useState(persistedState.autoSaveTxt);
     const setAutoSaveTxt = (val: boolean) => { persistedState.autoSaveTxt = val; _setAutoSaveTxt(val); };
@@ -125,8 +137,7 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
     };
 
     const handleCollect = () => {
-        let parsed = limit;
-        if (isNaN(parsed) || parsed < 1) parsed = 100;
+        const cutoffTime = timeRange > 0 ? Date.now() - (timeRange * 60 * 60 * 1000) : 0;
 
         setIsCollecting(true);
         setCollectedMessages([]);
@@ -147,14 +158,25 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
 
             const totalCollected = messageMap.size;
 
-            // Reached our target or hit the top
-            if (totalCollected >= parsed || unchangedTicks >= 10) {
+            let timeLimitReached = false;
+            if (cutoffTime > 0 && currentMsgs.length > 0) {
+                const oldestMsg = currentMsgs[0];
+                if (getMsgTime(oldestMsg) < cutoffTime) {
+                    timeLimitReached = true;
+                }
+            }
+
+            // Hit the top or reached the time limit
+            if (unchangedTicks >= 10 || timeLimitReached) {
                 clearInterval(intervalRef.current!);
                 intervalRef.current = null;
 
                 // Sort all accumulated messages by timestamp
-                const allSorted = Array.from(messageMap.values()).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-                const finalSet = allSorted.slice(-parsed);
+                let allSorted = Array.from(messageMap.values()).sort((a, b) => getMsgTime(a) - getMsgTime(b));
+                if (cutoffTime > 0) {
+                    allSorted = allSorted.filter(m => getMsgTime(m) >= cutoffTime);
+                }
+                const finalSet = allSorted;
                 const filteredSet = applyUserFilter(finalSet);
 
                 setCollectedMessages(filteredSet);
@@ -200,7 +222,7 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
 
     const saveTxtLog = (msgs: any[]) => {
         if (msgs.length === 0) return;
-        const text = msgs.map((m: any) => `[${new Date(m.timestamp).toLocaleString()}] ${formatAuthorName(m.author)}: ${m.content || ""}`).join("\n");
+        const text = msgs.map((m: any) => `[${new Date(getMsgTime(m)).toLocaleString()}] ${formatAuthorName(m.author)}: ${m.content || ""}`).join("\n");
         const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -212,17 +234,33 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
     };
 
     const handleSummarize = () => {
+        const cutoffTime = timeRange > 0 ? Date.now() - (timeRange * 60 * 60 * 1000) : 0;
+
         if (collectedMessages.length > 0 && !isCollecting) {
             // Use recovered or already collected messages
-            if (autoSaveTxt) saveTxtLog(collectedMessages);
-            performSummarize(collectedMessages);
+            let finalMsgs = collectedMessages;
+            if (cutoffTime > 0) {
+                finalMsgs = finalMsgs.filter(m => getMsgTime(m) >= cutoffTime);
+            }
+            if (autoSaveTxt) saveTxtLog(finalMsgs);
+            performSummarize(finalMsgs);
             return;
         }
 
         const currentMsgs = MessageStore.getMessages(props.channelId).toArray();
-        if (currentMsgs.length >= limit) {
+        let timeLimitReachedLocally = false;
+        if (cutoffTime > 0 && currentMsgs.length > 0) {
+            if (getMsgTime(currentMsgs[0]) < cutoffTime) {
+                timeLimitReachedLocally = true;
+            }
+        }
+
+        if (timeLimitReachedLocally) {
             // We have enough in cache already
-            const rawSet = currentMsgs.slice(-limit);
+            let rawSet = currentMsgs;
+            if (cutoffTime > 0) {
+                rawSet = rawSet.filter(m => getMsgTime(m) >= cutoffTime);
+            }
             const filteredSet = applyUserFilter(rawSet);
             setCollectedMessages(filteredSet);
             if (autoSaveTxt) saveTxtLog(filteredSet);
@@ -310,9 +348,7 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
             const defaultStructure = `[Output Format and Rules]
 Default Language Locale: ${discordLanguage} (Use this language unless instructed otherwise).
 Never include greetings or unnecessary titles. You must strictly follow the structure below.
-
-[One-line Summary]
-Write a core one-line summary to grasp the overall flow.
+Write a core one-line summary here to grasp the overall flow. Do not use a header or title for it.
 
 ■ [Topic Keyword (Generate yourself)]
 - Detailed summary 1 (Bold important keywords/numbers)
@@ -337,7 +373,7 @@ Write a core one-line summary to grasp the overall flow.
                 prompt += `[Urgent Additional Instruction: ${oneTimePrompt.trim()}]\n\n`;
             } else {
                 prompt = defaultStructure;
-                const toneOverride = `[CRITICAL RULE]\nYou must STRICTLY maintain the output structural format (One-line Summary, ■ Topic Keyword, bullet points) exactly as shown below.\nHOWEVER, you must COMPLETELY adapt the TONE, STYLE, PERSONALITY, and LANGUAGE of the entire summary content to match the Custom Instruction below, ignoring any conflicting tone or language guidelines (such as the default language locale).\n\n`;
+                const toneOverride = `[CRITICAL RULE]\nYou must STRICTLY maintain the output structural format (One-line summary at the top, ■ Topic Keyword, bullet points) exactly as shown below.\nHOWEVER, you must COMPLETELY adapt the TONE, STYLE, PERSONALITY, and LANGUAGE of the entire summary content to match the Custom Instruction below, ignoring any conflicting tone or language guidelines (such as the default language locale).\n\n`;
                 
                 let combinedCustom = "";
                 if (hasCustom) combinedCustom += `[Base Custom Instruction: ${props.customPrompt.trim()}]\n\n`;
@@ -379,8 +415,8 @@ Write a core one-line summary to grasp the overall flow.
                     const embedTitle = `📋 # 📊 ${guildName}: ${channelName} Summary`;
 
                     const formatTime = (msg: any) => {
-                        if (!msg || !msg.timestamp) return "??:??";
-                        const d = new Date(msg.timestamp);
+                        if (!msg) return "??:??";
+                        const d = new Date(getMsgTime(msg));
                         return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
                     };
                     const timeRange = `${formatTime(sorted[0])} ~ ${formatTime(sorted[sorted.length - 1])}`;
@@ -416,39 +452,29 @@ Write a core one-line summary to grasp the overall flow.
             {...props}
             title="Summary Dashboard"
         >
-            {/* Slider Section */}
-            <Forms.FormTitle tag="h5" style={{ marginTop: 0 }}>Message Count</Forms.FormTitle>
-            <Forms.FormText type="description" style={{ marginBottom: "12px" }}>
-                Select the number of messages to fetch.
-            </Forms.FormText>
-            <div style={{ padding: "0 8px", marginBottom: "20px" }}>
-                <Slider
-                    initialValue={limit}
-                    onValueChange={(val: number) => setLimit(Math.round(val))}
-                    asValueChanges={(val: number) => setLimit(Math.round(val))}
-                    markers={[50, 100, 300, 500, 1000, 2500, 5000]}
-                    onMarkerRender={(m: number) => m >= 1000 ? `${m/1000}k` : m.toString()}
-                    equidistant={true}
-                    stickToMarkers={true}
-                    disabled={isCollecting || isSummarizing}
-                />
-            </div>
-
-            {/* Manual Input Row */}
-            <div style={{ display: "flex", gap: "8px", alignItems: "flex-end", marginBottom: "20px" }}>
-                <div style={{ width: "100%" }}>
-                    <Forms.FormTitle tag="h5">Manual Input</Forms.FormTitle>
-                    <TextInput
-                        type="number"
-                        value={limit.toString()}
-                        onChange={(val: string) => {
-                            const num = parseInt(val, 10);
-                            if (!isNaN(num) && num > 0) setLimit(Math.min(num, 10000));
+            {/* Time Range Section */}
+            <div style={{ marginBottom: "20px" }}>
+                <Forms.FormTitle tag="h5" style={{ marginTop: 0 }}>Time Range</Forms.FormTitle>
+                <Forms.FormText type="description" style={{ marginBottom: "12px" }}>
+                    Automatically collect all messages within this time range.
+                </Forms.FormText>
+                <div style={{ padding: "0 8px" }}>
+                    <Slider
+                        initialValue={timeRange}
+                        onValueChange={(val: number) => setTimeRange(Math.round(val))}
+                        asValueChanges={(val: number) => setTimeRange(Math.round(val))}
+                        markers={[1, 3, 6, 12, 24]}
+                        onMarkerRender={(m: number) => {
+                            return `${m}h`;
                         }}
+                        equidistant={true}
+                        stickToMarkers={true}
                         disabled={isCollecting || isSummarizing}
                     />
                 </div>
             </div>
+
+            {/* Message Count Limit removed */}
 
             <Forms.FormDivider style={{ marginBottom: "16px" }} />
 
@@ -456,7 +482,7 @@ Write a core one-line summary to grasp the overall flow.
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                 <Forms.FormTitle tag="h5" style={{ margin: 0 }}>Collected Messages</Forms.FormTitle>
                 <span style={{ fontSize: "16px", fontWeight: 600, color: collectedMessages.length > 0 ? "var(--text-normal)" : "var(--text-muted)" }}>
-                    {collectedMessages.length > 0 || isCollecting ? `${collectedMessages.length} / ${limit}` : "0"}
+                    {collectedMessages.length > 0 || isCollecting ? `${collectedMessages.length}` : "0"}
                 </span>
             </div>
 
@@ -657,22 +683,7 @@ function SummaryResultModal(props: SummaryResultModalProps) {
                 continue;
             }
 
-            // One-line summary header
-            if (/^\[?(한 줄 요약|one-line summary|summary|요약)\]?:?/i.test(line)) {
-                elements.push(
-                    <div key={i} style={{
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        color: "var(--text-muted)",
-                        marginBottom: "4px",
-                        textTransform: "uppercase" as const,
-                        letterSpacing: "0.5px"
-                    }}>
-                        Summary
-                    </div>
-                );
-                continue;
-            }
+            // One-line summary header parsing removed
 
             // Bullet point
             if (line.startsWith("- ")) {
