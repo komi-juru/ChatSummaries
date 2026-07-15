@@ -418,7 +418,7 @@ CRITICAL OUTPUT RULES:
 
                 let prompt = "";
                 const defaultStructure = `[Output Format and Rules]
-You are summarizing a specific time segment: ${bucket.label}.
+You are summarizing a specific time segment. Do NOT output the time range or say "I will summarize this time".
 Never include daily greetings (e.g., "Good job today", "Everyone worked hard") or unnecessary titles.
 Write a core one-line summary here specifically for this time segment to grasp its unique flow. Do not write generic intros. Do not use a header or title.
 
