@@ -418,8 +418,9 @@ CRITICAL OUTPUT RULES:
 
                 let prompt = "";
                 const defaultStructure = `[Output Format and Rules]
-Never include greetings or unnecessary titles. You must strictly follow the structure below.
-Write a core one-line summary here to grasp the overall flow. Do not use a header or title for it.
+You are summarizing a specific time segment: ${bucket.label}.
+Never include daily greetings (e.g., "Good job today", "Everyone worked hard") or unnecessary titles.
+Write a core one-line summary here specifically for this time segment to grasp its unique flow. Do not write generic intros. Do not use a header or title.
 
 ■ [Topic Keyword (Generate yourself)]
 - Detailed summary 1 (Bold important keywords/numbers)
