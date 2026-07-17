@@ -46,6 +46,7 @@ pnpm inject
 
 ```bash
 cd Vencord/src/userplugins/ChatSummaries
+git pull
 pnpm build
 ```
 
