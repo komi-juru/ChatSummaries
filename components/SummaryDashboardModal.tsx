@@ -370,12 +370,15 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
             
             SummaryState.isSummarizing = true;
             
-            const promises = buckets.map(async (bucket) => {
-                if (bucket.msgs.length === 0) return null;
+            const LOW_VALUE_PATTERN = /^([ㅋㅎㅠㅜw?!~.\s]+)$/i;
+            let fullChatText = "";
+            let totalMessageCount = 0;
+
+            for (const bucket of buckets) {
+                if (bucket.msgs.length === 0) continue;
+                totalMessageCount += bucket.msgs.length;
                 
                 const sorted = [...bucket.msgs].sort((a, b) => getMsgTime(a) - getMsgTime(b));
-                const LOW_VALUE_PATTERN = /^([ㅋㅎㅠㅜw?!~.\s]+)$/i;
-
                 const chatText = sorted.map((m: any) => {
                     let text = m.content || "";
                     if (LOW_VALUE_PATTERN.test(text)) text = "";
@@ -387,24 +390,29 @@ export function SummaryDashboardModal(props: SummaryDashboardModalProps) {
                     return `${formatAuthorName(m.author)}: ${text}`;
                 }).filter(Boolean).join("\n");
 
-                let discordLanguage = "en-US";
-                let discordLangName = "English";
-                try {
-                    const { findByProps } = require("@webpack");
-                    const localeStore = findByProps("getLocale");
-                    if (localeStore && localeStore.getLocale) {
-                        discordLanguage = localeStore.getLocale();
-                        if (discordLanguage.startsWith("ko")) discordLangName = "Korean";
-                        else if (discordLanguage.startsWith("ja")) discordLangName = "Japanese";
-                        else if (discordLanguage.startsWith("zh")) discordLangName = "Chinese";
-                        else if (discordLanguage.startsWith("fr")) discordLangName = "French";
-                        else if (discordLanguage.startsWith("de")) discordLangName = "German";
-                        else if (discordLanguage.startsWith("es")) discordLangName = "Spanish";
-                        else if (discordLanguage.startsWith("ru")) discordLangName = "Russian";
-                    }
-                } catch (e) {}
+                if (chatText) {
+                    fullChatText += `\n\n${bucket.label} (${bucket.msgs.length} messages)\n${chatText}`;
+                }
+            }
 
-                const languageEngineBlock = `You are a ${discordLangName} summarization engine.
+            let discordLanguage = "en-US";
+            let discordLangName = "English";
+            try {
+                const { findByProps } = require("@webpack");
+                const localeStore = findByProps("getLocale");
+                if (localeStore && localeStore.getLocale) {
+                    discordLanguage = localeStore.getLocale();
+                    if (discordLanguage.startsWith("ko")) discordLangName = "Korean";
+                    else if (discordLanguage.startsWith("ja")) discordLangName = "Japanese";
+                    else if (discordLanguage.startsWith("zh")) discordLangName = "Chinese";
+                    else if (discordLanguage.startsWith("fr")) discordLangName = "French";
+                    else if (discordLanguage.startsWith("de")) discordLangName = "German";
+                    else if (discordLanguage.startsWith("es")) discordLangName = "Spanish";
+                    else if (discordLanguage.startsWith("ru")) discordLangName = "Russian";
+                }
+            } catch (e) {}
+
+            const languageEngineBlock = `You are a ${discordLangName} summarization engine.
 
 CRITICAL OUTPUT RULES:
 - The output language MUST be (${discordLangName}).
@@ -416,11 +424,13 @@ CRITICAL OUTPUT RULES:
 
 `;
 
-                let prompt = "";
-                const defaultStructure = `[Output Format and Rules]
-You are summarizing a specific time segment. Do NOT output the time range or say "I will summarize this time".
-Never include daily greetings (e.g., "Good job today", "Everyone worked hard") or unnecessary titles.
-Write a core one-line summary here specifically for this time segment to grasp its unique flow. Do not write generic intros. Do not use a header or title.
+            let prompt = "";
+            const defaultStructure = `[Output Format and Rules]
+The chat log is divided into time segments (e.g., 🕒 12:00-15:00 (100 messages)).
+For EACH time segment, output a summary in the following strict format. Do not use generic intros.
+
+🕒 12:00-15:00 (100 messages)
+Write a core one-line summary for this time segment here.
 
 ■ [Topic Keyword (Generate yourself)]
 - Detailed summary 1 (Bold important keywords/numbers)
@@ -429,51 +439,52 @@ Write a core one-line summary here specifically for this time segment to grasp i
 ■ [Next Topic Keyword]
 - Detailed summary 1...
 
+(Repeat the above structure for the next time segment)
+
 [Summary Guidelines]
 1. For conversations with only images/links, infer from user reactions.
 2. Compress facts concisely without dragging on.
-3. Discard trivial chat and summarize mainly around 3~4 core topics.
+3. Discard trivial chat and summarize mainly around 3~4 core topics per time segment.
 
 `;
 
-                const hasOneTime = oneTimePrompt.trim().length > 0;
-                const hasCustom = props.customPrompt.trim().length > 0;
+            const hasOneTime = oneTimePrompt.trim().length > 0;
+            const hasCustom = props.customPrompt.trim().length > 0;
 
-                if (hasOneTime && !keepFormat) {
-                    prompt = languageEngineBlock + `[Instruction]\n\n`;
-                    if (hasCustom) prompt += `[Base Custom Instruction: ${props.customPrompt.trim()}]\n\n`;
-                    prompt += `[Urgent Additional Instruction: ${oneTimePrompt.trim()}]\n\n`;
-                } else {
-                    prompt = languageEngineBlock + defaultStructure;
-                    const toneOverride = `[CRITICAL RULE]\nYou must STRICTLY maintain the output structural format (One-line summary at the top, ■ Topic Keyword, bullet points) exactly as shown below.\nHOWEVER, you must COMPLETELY adapt the TONE, STYLE, PERSONALITY of the entire summary content to match the Custom Instruction below.\n\n`;
-                    
-                    let combinedCustom = "";
-                    if (hasCustom) combinedCustom += `[Base Custom Instruction: ${props.customPrompt.trim()}]\n\n`;
-                    if (hasOneTime) combinedCustom += `[Urgent Additional Instruction (Highest Priority): ${oneTimePrompt.trim()}]\n\n`;
-                    
-                    if (combinedCustom) {
-                        prompt = toneOverride + combinedCustom + prompt;
-                    }
+            if (hasOneTime && !keepFormat) {
+                prompt = languageEngineBlock + `[Instruction]\n\n`;
+                if (hasCustom) prompt += `[Base Custom Instruction: ${props.customPrompt.trim()}]\n\n`;
+                prompt += `[Urgent Additional Instruction: ${oneTimePrompt.trim()}]\n\n`;
+            } else {
+                prompt = languageEngineBlock + defaultStructure;
+                const toneOverride = `[CRITICAL RULE]\nYou must STRICTLY maintain the output structural format (Time segments, ■ Topic Keyword, bullet points) exactly as shown below.\nHOWEVER, you must COMPLETELY adapt the TONE, STYLE, PERSONALITY of the entire summary content to match the Custom Instruction below.\n\n`;
+                
+                let combinedCustom = "";
+                if (hasCustom) combinedCustom += `[Base Custom Instruction: ${props.customPrompt.trim()}]\n\n`;
+                if (hasOneTime) combinedCustom += `[Urgent Additional Instruction (Highest Priority): ${oneTimePrompt.trim()}]\n\n`;
+                
+                if (combinedCustom) {
+                    prompt = toneOverride + combinedCustom + prompt;
                 }
+            }
 
-                prompt += `Chat Log:\n${chatText}`;
+            prompt += `Chat Log:${fullChatText}`;
 
+            let finalResult = "";
+            let isFailed = false;
+            try {
+                finalResult = await Summarizer.generateSummary(model, apiKey, prompt);
+            } catch (e) {
+                await new Promise(r => setTimeout(r, 1000));
                 try {
-                    const res = await Summarizer.generateSummary(model, apiKey, prompt);
-                    return { label: bucket.label, result: res, messageCount: sorted.length, failed: false };
-                } catch (e) {
-                    await new Promise(r => setTimeout(r, 1000));
-                    try {
-                        const res = await Summarizer.generateSummary(model, apiKey, prompt);
-                        return { label: bucket.label, result: res, messageCount: sorted.length, failed: false };
-                    } catch (e2) {
-                        return { label: bucket.label, result: "⚠️ Failed to summarize this time period.", messageCount: sorted.length, failed: true };
-                    }
+                    finalResult = await Summarizer.generateSummary(model, apiKey, prompt);
+                } catch (e2) {
+                    finalResult = "⚠️ Failed to summarize the chat log.";
+                    isFailed = true;
                 }
-            });
+            }
 
-            const chunkResults = await Promise.all(promises);
-            const results = chunkResults.filter(Boolean) as { label: string, result: string, messageCount: number, failed: boolean }[];
+            const results = [{ label: "Summary", result: finalResult, messageCount: totalMessageCount, failed: isFailed }];
 
             if (results.length === 0) {
                 showToast("No messages found in time range.", Toasts.Type.FAILURE);
