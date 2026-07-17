@@ -35,8 +35,9 @@ git clone https://github.com/Vendicated/Vencord
 cd Vencord/src
 mkdir userplugins
 cd userplugins
-git clone https://github.com/komi-juru/AlwaysTranslate.git alwaysTranslate
+git clone https://github.com/komi-juru/ChatSummaries.git chatsummaries
 pnpm build
+pnpm inject
 ```
 
 ---
