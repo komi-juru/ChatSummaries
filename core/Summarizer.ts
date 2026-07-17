@@ -6,7 +6,7 @@
 
 import { PluginNative } from "@utils/types";
 
-const Native = VencordNative.pluginHelpers.ChatSummaries as PluginNative<typeof import("../native")>;
+const Native = (VencordNative.pluginHelpers.ChatSummaries || VencordNative.pluginHelpers.chatsummaries) as PluginNative<typeof import("../native")>;
 
 export class Summarizer {
     // fetchMessages removed in favor of DOM MessageStore auto-scrolling

@@ -493,7 +493,7 @@ Write a core one-line summary here specifically for this time segment to grasp i
                 const guild = channel ? GuildStore.getGuild(channel.guild_id) : null;
                 const guildName = guild ? guild.name : "Unknown Guild";
                 const channelName = channel ? channel.name : "Unknown Channel";
-                const embedTitle = `📋 # 📊 ${guildName}: ${channelName} Summary`;
+                const embedTitle = `📋 # ${guildName}: ${channelName} Summary`;
 
                 let webhookText = "";
                 for (const r of results) {
