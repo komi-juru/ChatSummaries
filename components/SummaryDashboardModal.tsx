@@ -439,12 +439,11 @@ Write a core one-line summary for this time segment here.
 ■ [Next Topic Keyword]
 - Detailed summary 1...
 
-(Repeat the above structure for the next time segment)
-
 [Summary Guidelines]
-1. For conversations with only images/links, infer from user reactions.
-2. Compress facts concisely without dragging on.
-3. Discard trivial chat and summarize mainly around 3~4 core topics per time segment.
+1. Do NOT insert any dashes or horizontal rules (---) between time segments.
+2. For conversations with only images/links, infer from user reactions.
+3. Compress facts concisely without dragging on.
+4. Discard trivial chat and summarize mainly around 3~4 core topics per time segment.
 
 `;
 
